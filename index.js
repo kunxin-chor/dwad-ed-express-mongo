@@ -51,8 +51,6 @@ async function main() {
                 '$gte': parseInt(req.query.min_rating) // must convert to int first because whatever is from query string is a string
             }
         }
-        console.log("criteria=", criteria);
-
         const reviews = await db.collection('reviews').find(criteria).toArray();
         res.json(reviews);  // res.json will automatically convert a JavaScript array or object into JSON
     })
@@ -62,7 +60,7 @@ async function main() {
     // by the RESTFUL convention (i.e standards), when a route is
     // to add a new document to a database, we use the POST method
     app.post('/reviews', async function(req,res){
-        await db.collection('reviews').insertOne({
+        const results = await db.collection('reviews').insertOne({
             "title": req.body.title,
             "food": req.body.food,
             "content":req.body.content,
@@ -72,7 +70,8 @@ async function main() {
         // we must send back a JSON message or else the web browser (i.e the client)
         // will be waiting for a response until it times out.
         res.json({
-            'message':'ok'
+            'message':'New review created successfully',
+            'results': results
         })
     })
 
@@ -85,7 +84,7 @@ async function main() {
             '_id':ObjectId(req.params.reviewId)
         })
 
-        await db.collection('reviews').updateOne({
+        const results = await db.collection('reviews').updateOne({
             '_id': ObjectId(req.params.reviewId)
         },{
             "$set": {
@@ -97,9 +96,19 @@ async function main() {
         })
 
         res.json({
-            'message':'put recieved'
+            'message':'Review udpated successfully',
+            'results': results
         })
 
+    })
+
+    app.delete('/reviews/:reviewId', async function(req,res){
+        await db.collection('reviews').deleteOne({
+            '_id': ObjectId(req.params.reviewId)
+        })
+        res.json({
+            'message':"Review deleted successfully"
+        })
     })
 }
 
