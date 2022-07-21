@@ -4,6 +4,7 @@ const cors = require('cors');
 
 // require in our MongoUtil file
 const mongoUtil = require('./MongoUtil');
+const { ObjectId } = require('mongodb');  // allows the use of the ObjectId function
 
 // 2. create an expres application
 const app = express();
@@ -27,16 +28,45 @@ async function main() {
         });
     })
 
+    // to do a search, the client will the search criteria via the query strings
+    app.get('/reviews', async function(req,res){
+       
+
+        let criteria = {};  // empty criteria object means no criteria (ie. mean documents will be shortlisted)
+
+        // if the query string contains the 'title' key, search for title (ie. if the client indicates for the search for title)
+        if (req.query.title) {
+            // if req.query.title contains any values besides null, undefined, "", 0 etc etc.
+            // then we add it to the criteria
+            criteria.title = {
+                '$regex': req.query.title,  // match by pattern
+                '$options':'i'
+            }
+        }
+
+        // if the query string contains the `min_rating` key, then only include reviews which food rating is greater than `min_rating` value
+        // (i.e if the client provides a min_rating, then only shortlist food which rating is better than that)
+        if (req.query.min_rating) {
+            criteria.rating = {
+                '$gte': parseInt(req.query.min_rating) // must convert to int first because whatever is from query string is a string
+            }
+        }
+        console.log("criteria=", criteria);
+
+        const reviews = await db.collection('reviews').find(criteria).toArray();
+        res.json(reviews);  // res.json will automatically convert a JavaScript array or object into JSON
+    })
+
     // route to add a document to the database
     // we use the POST method because we are adding to the database
     // by the RESTFUL convention (i.e standards), when a route is
     // to add a new document to a database, we use the POST method
     app.post('/reviews', async function(req,res){
         await db.collection('reviews').insertOne({
-            "title":"Good steak at the SteakOut Resturant",
-            "food":"Ribeye Steak",
-            "content":"The steak was perfectly prepared",
-            "rating": 9
+            "title": req.body.title,
+            "food": req.body.food,
+            "content":req.body.content,
+            "rating": req.body.rating
         })
         // send a JSON message 
         // we must send back a JSON message or else the web browser (i.e the client)
@@ -44,6 +74,32 @@ async function main() {
         res.json({
             'message':'ok'
         })
+    })
+
+    // PUT means update by REPLACING a document with a new one.
+    // BUT the new document has the same _id as the original one.
+    app.put('/reviews/:reviewId', async function(req,res){
+        
+        // fetch the original document first
+        const review = await db.collection('reviews').findOne({
+            '_id':ObjectId(req.params.reviewId)
+        })
+
+        await db.collection('reviews').updateOne({
+            '_id': ObjectId(req.params.reviewId)
+        },{
+            "$set": {
+                'title': req.body.title ? req.body.title : review.title,  // review is the original document
+                'food': req.body.food ? req.body.food : review.food,
+                'content': req.body.content ? req.body.content : review.content,
+                'rating': req.body.rating ? req.body.rating : review.rating
+            }
+        })
+
+        res.json({
+            'message':'put recieved'
+        })
+
     })
 }
 
