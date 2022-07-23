@@ -1,6 +1,9 @@
 // 1. require in Express
 const express = require('express');
-const cors = require('cors');
+const cors = require('cors');  // cross origin resources sharing
+require('dotenv').config();  // require in the dotenv module and run the config function in it
+
+console.log(process.env);
 
 // require in our MongoUtil file
 const mongoUtil = require('./MongoUtil');
@@ -15,8 +18,8 @@ app.use(cors()); // allow cross origin resources sharing (why do we need this? b
 
 // the reason why those two variables are in ALL CAPS is to remind
 // the programmer that are global and have special meaning
-const MONGO_URI = "mongodb+srv://root:rotiprata123@cluster0.s3fdn.mongodb.net/?retryWrites=true&w=majority";
-const DB_NAME = "dwad_e_food_reviews";
+const MONGO_URI = process.env.MONGO_URI;
+const DB_NAME = process.env.DB_NAME;
 
 async function main() {
     const db = await mongoUtil.connect(MONGO_URI, DB_NAME);
